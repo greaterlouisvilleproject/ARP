@@ -1,0 +1,108 @@
+---
+title: "arp_resource"
+output: html_document
+date: "2022-11-17"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      dev.args=list(bg="transparent"), fig.width=16,fig.height=12)
+library(glptools)
+glp_load_packages(TRUE)
+library(arrow)
+library(viridis)
+library(forcats)
+library(hrbrthemes)
+library(glpdata)
+```
+
+
+```{r Dataframe 1: Peer cities}
+peer_cities_temp <- glptools::FIPS_df
+
+peer_cities_info <- glptools::FIPS_info
+
+
+
+
+```
+
+
+```{r Dataframe 2: Governments}
+govs_temp <- read_csv("ARP Project Reports - city_county_list_temp.csv")
+
+
+## Harrison code
+cities <- read_csv("fiscalrecoveryfunds-metrocitiesfunding1-CSV.csv")
+counties <- read_csv("fiscalrecoveryfunds_countyfunding_2021.05.10-1a.csv")
+
+FIPS_info <- glptools::FIPS_info %>%
+  filter(county != "St. Louis County", FIPS != "MERGED")
+
+city_pop <- read_csv("city_pop.csv") %>% 
+  left_join(FIPS_info) %>%
+  select(FIPS, city_population = population)
+
+pop_df <- glpdata::population_county %>%
+  filter(year == max(year),
+         sex == "total",
+         race == "total") %>%
+  select(FIPS, county_population = population) %>%
+  left_join(city_pop)
+
+FIPS_info <- glptools::FIPS_info %>%
+  mutate(
+    city = case_when(
+      city == "Jacksonville" ~ "Jacksonville city",
+      city == "Louisville" ~ "Louisville-Jefferson County",
+      city == "St. Louis" ~ "St Louis",
+      city == "Nashville" ~ "Nashville-Davidson",
+      TRUE ~ city),
+    county = case_when(
+      county == "St. Louis City" ~ "St. Louis city", 
+       county == "St. Louis County" ~ "St. Louis", 
+      county == "Richmond City" ~ "Richmond city", 
+      TRUE ~ county)) %>%
+  filter(FIPS != "MERGED",
+         county != "St. Louis County")
+
+cities %<>%
+  inner_join(FIPS_info, by = c("State" = "state", "City" = "city")) %>%
+  select(FIPS, city_allocation = Allocation) 
+
+counties %<>%
+  mutate(
+    County = str_remove_all(County, " County")) %>%
+  inner_join(FIPS_info, by = c("State" = "state", "County" = "county")) %>%
+  select(FIPS, county_allocation = Allocation)
+
+output <- full_join(cities, counties)
+
+output %<>%
+  mutate(city_allocation = str_remove(city_allocation, "\\$") %>% 
+           str_remove_all(",") %>%
+           as.numeric(),
+         county_allocation = str_remove(county_allocation, "\\$") %>% 
+           str_remove_all(",") %>%
+           as.numeric())%>%
+  left_join(pop_df)
+
+output %<>%
+  filter(FIPS %not_in% c("12031", "29189", "37183", "39113", "51760")) %>%
+  mutate(
+    county_allocation_scaled = county_allocation / county_population * city_population,
+    allocation1 = city_allocation + county_allocation,
+    allocation2 = city_allocation + county_allocation_scaled,
+    
+    city_allocation_pp = city_allocation / city_population,
+    county_allocation_pp = county_allocation / county_population,
+    county_allocation_scaled_pp = county_allocation_scaled / county_population,
+    
+    allocation_pp = city_allocation_pp + county_allocation_pp,
+    
+    city_pct = city_population / county_population * 100)
+
+```
+
+
