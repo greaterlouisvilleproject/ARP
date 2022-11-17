@@ -18,32 +18,47 @@ library(glpdata)
 ```
 
 
-```{r Dataframe 1: Peer cities}
-peer_cities_temp <- glptools::FIPS_df
+```{r peer_citie}
+FIPS_df <- glptools::FIPS_df
 
-peer_cities_info <- glptools::FIPS_info
-
-
-
-
+FIPS_info <- glptools::FIPS_info
 ```
 
 
-```{r Dataframe 2: Governments}
-govs_temp <- read_csv("ARP Project Reports - city_county_list_temp.csv")
+```{r governments}
+# Create clean governments data frame
+projects <- read_csv("ARP Project Reports - Projects.csv",
+                      col_types = "cccccccccccncnncnnccc")
+
+# Select only government ID columns, keep only distinct rows, and replace the Birmingham FIPS code 1073 with 01073
+governments <- projects %>%
+  select(FIPS, 
+         State, 
+         city_county = `city/county`, 
+         city_county_status = `city/county_status`) %>%
+  distinct() %>%
+  pull_peers()
+
+# Should have 17 cities and 17 - 3 = 14 counties 
 
 
-## Harrison code
+## Read in city and county allocations
 cities <- read_csv("fiscalrecoveryfunds-metrocitiesfunding1-CSV.csv")
 counties <- read_csv("fiscalrecoveryfunds_countyfunding_2021.05.10-1a.csv")
 
-FIPS_info <- glptools::FIPS_info %>%
-  filter(county != "St. Louis County", FIPS != "MERGED")
+# Create a FIPS data frame with 
+FIPS_info_subset <- FIPS_info %>%
+  filter(
+    county != "St. Louis County", 
+    FIPS != "MERGED", 
+    current == 1)
 
+# Read in city population data
 city_pop <- read_csv("city_pop.csv") %>% 
-  left_join(FIPS_info) %>%
+  left_join(FIPS_info_subset) %>%
   select(FIPS, city_population = population)
 
+# Read in county population and combine with city population
 pop_df <- glpdata::population_county %>%
   filter(year == max(year),
          sex == "total",
@@ -51,7 +66,7 @@ pop_df <- glpdata::population_county %>%
   select(FIPS, county_population = population) %>%
   left_join(city_pop)
 
-FIPS_info <- glptools::FIPS_info %>%
+FIPS_info_subset <- FIPS_info %>%
   mutate(
     city = case_when(
       city == "Jacksonville" ~ "Jacksonville city",
@@ -63,29 +78,30 @@ FIPS_info <- glptools::FIPS_info %>%
       county == "St. Louis City" ~ "St. Louis city", 
        county == "St. Louis County" ~ "St. Louis", 
       county == "Richmond City" ~ "Richmond city", 
-      TRUE ~ county)) %>%
-  filter(FIPS != "MERGED",
-         county != "St. Louis County")
+      TRUE ~ county))
 
 cities %<>%
-  inner_join(FIPS_info, by = c("State" = "state", "City" = "city")) %>%
-  select(FIPS, city_allocation = Allocation) 
+  inner_join(FIPS_info_subset, by = c("State" = "state", "City" = "city")) %>%
+  transmute(
+    FIPS, 
+    city_county_status = "city",
+    allocation = Allocation) 
 
 counties %<>%
   mutate(
     County = str_remove_all(County, " County")) %>%
-  inner_join(FIPS_info, by = c("State" = "state", "County" = "county")) %>%
-  select(FIPS, county_allocation = Allocation)
+  inner_join(FIPS_info_subset, by = c("State" = "state", "County" = "county")) %>%
+  transmute(
+    FIPS,
+    city_county_status = "county",
+    allocation = Allocation)
 
-output <- full_join(cities, counties)
+output <- bind_rows(cities, counties)
 
 output %<>%
-  mutate(city_allocation = str_remove(city_allocation, "\\$") %>% 
+  mutate(allocation = str_remove(allocation, "\\$") %>% 
            str_remove_all(",") %>%
-           as.numeric(),
-         county_allocation = str_remove(county_allocation, "\\$") %>% 
-           str_remove_all(",") %>%
-           as.numeric())%>%
+           as.numeric()) %>%
   left_join(pop_df)
 
 output %<>%
@@ -102,6 +118,23 @@ output %<>%
     allocation_pp = city_allocation_pp + county_allocation_pp,
     
     city_pct = city_population / county_population * 100)
+
+output_cities <- output %>% 
+  select(FIPS,
+         allocation = city_allocation,
+         population = city_population)
+
+output_counties <- output %>% 
+  select(FIPS,
+         allocation = county_allocation,
+         population = county_population)
+
+governments_cities <- governments %>%
+  filter(city_county_status == "city")
+
+governments_counties <- governments %>%
+  filter(city_county_status == "county")
+
 
 ```
 
