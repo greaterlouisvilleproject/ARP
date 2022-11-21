@@ -1,0 +1,30 @@
+Recipeint Name,State,state_abbr,city_county,city_county_status
+"Jefferson County, Alabama",Alabama,AL,Jefferson,county
+"City Of Birmingham, Alabama",Alabama,AL,Birmingham,city
+"City Of Indianapolis and Marion County, Indiana",Indiana,IN,Indianapolis,city
+"Kent County, Michigan",Michigan,MI,Kent,county
+"Grand Rapids City, Michigan",Michigan,MI,Grand Rapids,city
+"City Of Kansas City, Missouri",Missouri,MO,Kansas City,city
+"Jackson County, Missouri",Missouri,MO,Jackson,county
+"St. Louis County Missouri, Missouri",Missouri,MO,St. Louis County,county
+"City Of St. Louis, Missouri",Missouri,MO,St. Louis City,city
+"Douglas County, Nebraska",Nebraska,NE,Douglas,county
+"Omaha City, Nebraska",Nebraska,NE,Omaha,city
+"Greensboro City, North Carolina",North Carolina,NC,Greensboro,city
+"Guilford County, North Carolina",North Carolina,NC,Guilford,county
+"Mecklenburg County, North Carolina",North Carolina,NC,Mecklenburg,county
+"City Of Charlotte, North Carolina",North Carolina,NC,Charlotte,city
+"City Of Columbus, Ohio",Ohio,OH,Columbus,city
+"Franklin County, Ohio",Ohio,OH,Franklin,county
+"City Of Cincinnati, Ohio",Ohio,OH,Cincinatti,city
+"Hamilton County, Ohio",Ohio,OH,Hamilton,county
+"City Of Oklahoma City, Oklahoma",Oklahoma,OK,Oklahoma City,city
+"Oklahoma County, Oklahoma",Oklahoma,OK,Oklahoma,county
+"City Of Tulsa, Oklahoma",Oklahoma,OK,Tulsa,city
+"County Of Tulsa, Oklahoma",Oklahoma,OK,Tulsa,county
+"Greenville County, South Carolina",South Carolina,SC,Greenville,county
+"Greenville, South Carolina",South Carolina,SC,Greenville,city
+"Knox County, Tennessee",Tennessee,TN,Knox,county
+"Knoxville, Tennessee",Tennessee,TN,Knoxville,city
+"Shelby County, Tennessee",Tennessee,TN,Shelby,county
+"City Of Memphis, Tennessee",Tennessee,TN,Memphis,city

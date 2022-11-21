@@ -139,3 +139,79 @@ governments_counties <- governments %>%
 ```
 
 
+```{r projects}
+
+
+
+```
+
+```{r louisville expenditures}
+
+
+expenditures <- read_csv("ARP Project Reports - Expenditures.csv",
+                        col_types = "cccnnnnn")
+
+```
+
+```{r peer expenditure cleanup}
+
+expenditures_peer_crosswalk <- read_csv("ARP Project Reports - project_to_govenment_crosswalk.csv")
+
+q4_2021_peer_exp <- read_csv("SLFRF-January-2022-Quarterly-Data-through-December-31-2021.xlsx - Project Updated.csv")
+q1_2022_peer_exp <- read.csv("April-2022-Quarterly-and-Annual-Reporting-Data-through-March-31-2022 (5).xlsx - Projects.csv")
+q2_2022_peer_exp <-read.csv("July-2022-Quarterly-Reporting-Data-through-June-30-2022 (5).xlsx - Projects.csv")
+
+
+q2_2022_peer_exp_filter <- q2_2022_peer_exp %>% 
+  select('Recipient.Name', 'State.Territory', 'Completion.Status', "Project.Name", "Expenditure.Category.Group",
+         "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
+) %>% 
+  mutate_at(c("Adopted.Budget", 
+              "Total.Cumulative.Obligations", 
+              "Total.Cumulative.Expenditures"), as.numeric) %>%
+  mutate(year = '2022',
+         quarter = 'Q2')
+
+#does not contain 'Completion.Status'
+q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
+  select('Recipient.Name', 'State.Territory', "Project.Name", "Expenditure.Category.Group", "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
+  ) %>%
+  mutate_at(c("Adopted.Budget", 
+              "Total.Cumulative.Obligations", 
+              "Total.Cumulative.Expenditures"), as.numeric) %>%
+    mutate(year = '2022',
+         quarter = 'Q1')
+
+#does not have completion status
+q4_2021_peer_exp_filter <- q4_2021_peer_exp %>%
+  select("Recipient Name", "State/Territory", "Project Name", "Expenditure Category Group", 
+         "Expenditure Category", "Project Description", "Adopted Budget", "Total Obligations", "Total Expenditures"
+  ) %>%
+  mutate(
+    Recipient.Name = `Recipient Name`,
+    State.Territory = `State/Territory`,
+    Project.Name = `Project Name`,
+    Expenditure.Category.Group = `Expenditure Category Group`,
+    Expenditure.Category = `Expenditure Category`,
+    Project.Description = `Project Description`,
+    Adopted.Budget = `Adopted Budget`,
+    Total.Cumulative.Obligations = `Total Obligations`,
+    Total.Cumulative.Expenditures = `Total Expenditures`
+    ) %>%
+  select("Recipient.Name", "State.Territory", "Project.Name", "Expenditure.Category.Group", 
+         "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures") %>%
+    mutate(year = '2021',
+         quarter = 'Q4')
+
+
+####### HEY HARRISON :) why is this ignoring the 'year' and 'quarter' columns?
+expenditures_peer_temp <- bind_rows(q2_2022_peer_exp_filter, 
+                                    q1_2022_peer_exp_filter, 
+                                    q4_2021_peer_exp_filter)
+
+##things left to do...
+#create new column in expenditures_peer_temp with state abbreviation
+#merge expenditures_peer_temp with governments df
+
+```
+
