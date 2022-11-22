@@ -155,13 +155,22 @@ expenditures <- read_csv("ARP Project Reports - Expenditures.csv",
 
 ```{r peer expenditure cleanup}
 
-expenditures_peer_crosswalk <- read_csv("ARP Project Reports - project_to_govenment_crosswalk.csv")
+#create crosswalk file
+expenditures_peer_crosswalk <- read_csv("ARP Project Reports - project_to_govenment_crosswalk.csv") %>%
+  mutate(
+    `Recipient Name`= `Recipeint Name`
+  )
 
+
+#read in quarterly expenditures
 q4_2021_peer_exp <- read_csv("SLFRF-January-2022-Quarterly-Data-through-December-31-2021.xlsx - Project Updated.csv")
 q1_2022_peer_exp <- read.csv("April-2022-Quarterly-and-Annual-Reporting-Data-through-March-31-2022 (5).xlsx - Projects.csv")
 q2_2022_peer_exp <-read.csv("July-2022-Quarterly-Reporting-Data-through-June-30-2022 (5).xlsx - Projects.csv")
 
 
+####### recode column names
+
+#q2 2022
 q2_2022_peer_exp_filter <- q2_2022_peer_exp %>% 
   select('Recipient.Name', 'State.Territory', 'Completion.Status', "Project.Name", "Expenditure.Category.Group",
          "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
@@ -172,6 +181,7 @@ q2_2022_peer_exp_filter <- q2_2022_peer_exp %>%
   mutate(year = '2022',
          quarter = 'Q2')
 
+#q1 2022
 #does not contain 'Completion.Status'
 q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
   select('Recipient.Name', 'State.Territory', "Project.Name", "Expenditure.Category.Group", "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
@@ -182,6 +192,7 @@ q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
     mutate(year = '2022',
          quarter = 'Q1')
 
+#q4 2021
 #does not have completion status
 q4_2021_peer_exp_filter <- q4_2021_peer_exp %>%
   select("Recipient Name", "State/Territory", "Project Name", "Expenditure Category Group", 
@@ -203,15 +214,34 @@ q4_2021_peer_exp_filter <- q4_2021_peer_exp %>%
     mutate(year = '2021',
          quarter = 'Q4')
 
-
-####### HEY HARRISON :) why is this ignoring the 'year' and 'quarter' columns?
+#bind rows
 expenditures_peer_temp <- bind_rows(q2_2022_peer_exp_filter, 
                                     q1_2022_peer_exp_filter, 
                                     q4_2021_peer_exp_filter)
 
-##things left to do...
+
 #create new column in expenditures_peer_temp with state abbreviation
-#merge expenditures_peer_temp with governments df
+expenditures_peer_temp$state_abbr <- state.abb[match(expenditures_peer_temp$State.Territory, state.name)]
+
+
+#merge expenditures_peer_temp with cross walk
+expenditures_peer_temp <- expenditures_peer_temp %>%
+  mutate(
+    `Recipient Name`= Recipient.Name
+  )
+
+expenditures_crosswalk_merge <- expenditures_peer_crosswalk %>%
+  left_join(expenditures_peer_temp, by = c("Recipient Name", "state_abbr"))
+
+#merge expenditures_crosswalk_merge with government dataframe
+expenditure_peer <- governments %>%
+  left_join(expenditures_crosswalk_merge, by = c("city_county", "city_county_status")) %>% 
+  mutate(State = State.x) %>%
+  select(-c("Recipeint Name", "State.y", "state_abbr", "Recipient Name", "State.Territory", "State.x")) %>%
+  relocate(State, .before = city_county)
+  
+
+  
 
 ```
 
