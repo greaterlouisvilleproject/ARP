@@ -30,6 +30,10 @@ FIPS_info <- glptools::FIPS_info
 projects <- read_csv("ARP Project Reports - Projects.csv",
                       col_types = "cccccccccccncnncnnccc")
 
+## Read in city and county allocations
+city_allocations <- read_csv("fiscalrecoveryfunds-metrocitiesfunding1-CSV.csv")
+county_allocations <- read_csv("fiscalrecoveryfunds_countyfunding_2021.05.10-1a.csv")
+
 # Select only government ID columns, keep only distinct rows, and replace the Birmingham FIPS code 1073 with 01073
 governments <- projects %>%
   select(FIPS, 
@@ -41,32 +45,30 @@ governments <- projects %>%
 
 # Should have 17 cities and 17 - 3 = 14 counties 
 
-
-## Read in city and county allocations
-cities <- read_csv("fiscalrecoveryfunds-metrocitiesfunding1-CSV.csv")
-counties <- read_csv("fiscalrecoveryfunds_countyfunding_2021.05.10-1a.csv")
-
-# Create a FIPS data frame with 
-FIPS_info_subset <- FIPS_info %>%
+FIPS_population <- FIPS_info %>%
   filter(
     county != "St. Louis County", 
     FIPS != "MERGED", 
     current == 1)
 
 # Read in city population data
-city_pop <- read_csv("city_pop.csv") %>% 
-  left_join(FIPS_info_subset) %>%
-  select(FIPS, city_population = population)
+city_pop <- read_csv("city_pop.csv")
+
+FIPS_population %<>% 
+  left_join(city_pop, by = "city") %>%
+  select(FIPS, city, state, county, city_population = population)
 
 # Read in county population and combine with city population
-pop_df <- glpdata::population_county %>%
+county_pop <- glpdata::population_county %>%
   filter(year == max(year),
          sex == "total",
          race == "total") %>%
-  select(FIPS, county_population = population) %>%
-  left_join(city_pop)
+  select(FIPS, county_population = population)
 
-FIPS_info_subset <- FIPS_info %>%
+FIPS_population %<>%
+  left_join(county_pop, by = "FIPS")
+
+FIPS_population %<>%
   mutate(
     city = case_when(
       city == "Jacksonville" ~ "Jacksonville city",
@@ -80,62 +82,56 @@ FIPS_info_subset <- FIPS_info %>%
       county == "Richmond City" ~ "Richmond city", 
       TRUE ~ county))
 
-cities %<>%
-  inner_join(FIPS_info_subset, by = c("State" = "state", "City" = "city")) %>%
+city_allocations %<>%
+  inner_join(FIPS_population, by = c("State" = "state", "City" = "city")) %>%
   transmute(
     FIPS, 
     city_county_status = "city",
     allocation = Allocation) 
 
-counties %<>%
+county_allocations %<>%
   mutate(
     County = str_remove_all(County, " County")) %>%
-  inner_join(FIPS_info_subset, by = c("State" = "state", "County" = "county")) %>%
+  inner_join(FIPS_population, by = c("State" = "state", "County" = "county")) %>%
   transmute(
     FIPS,
     city_county_status = "county",
     allocation = Allocation)
 
-output <- bind_rows(cities, counties)
+all_allocations <- bind_rows(city_allocations, county_allocations)
 
-output %<>%
+all_allocations %<>%
   mutate(allocation = str_remove(allocation, "\\$") %>% 
            str_remove_all(",") %>%
-           as.numeric()) %>%
-  left_join(pop_df)
+           as.numeric()) 
 
-output %<>%
-  filter(FIPS %not_in% c("12031", "29189", "37183", "39113", "51760")) %>%
+city_allocations <- all_allocations %>%
+  filter(city_county_status == "city") %>%
+  rename(city_allocation = allocation) %>%
+  select(-city_county_status)
+
+county_allocations <- all_allocations %>%
+  filter(city_county_status == "county") %>%
+  rename(county_allocation = allocation) %>%
+  select(-city_county_status)
+
+governments_wide <- FIPS_population %<>%
+  left_join(city_allocations) %>%
+  left_join(county_allocations) %>%
+  select(FIPS, city_allocation, county_allocation, city_population, county_population)
+
+all_allocations %<>%
   mutate(
-    county_allocation_scaled = county_allocation / county_population * city_population,
-    allocation1 = city_allocation + county_allocation,
-    allocation2 = city_allocation + county_allocation_scaled,
-    
-    city_allocation_pp = city_allocation / city_population,
-    county_allocation_pp = county_allocation / county_population,
-    county_allocation_scaled_pp = county_allocation_scaled / county_population,
-    
-    allocation_pp = city_allocation_pp + county_allocation_pp,
-    
-    city_pct = city_population / county_population * 100)
-
-output_cities <- output %>% 
-  select(FIPS,
-         allocation = city_allocation,
-         population = city_population)
-
-output_counties <- output %>% 
-  select(FIPS,
-         allocation = county_allocation,
-         population = county_population)
-
-governments_cities <- governments %>%
-  filter(city_county_status == "city")
-
-governments_counties <- governments %>%
-  filter(city_county_status == "county")
+    city_county_status = if_else(FIPS %in% c(18097, 21111, 47037), "merged", city_county_status)) %>%
+  group_by(FIPS, city_county_status) %>%
+  summarize(allocation = sum(allocation), .groups = "drop")
 
 
+governments_long <- governments %>%
+  left_join(all_allocations, by = c("FIPS", "city_county_status"))
+
+
+rm(FIPS_population, governments, city_allocations, county_allocations, city_pop, county_pop, all_allocations)
 ```
 
 
@@ -146,8 +142,6 @@ governments_counties <- governments %>%
 ```
 
 ```{r louisville expenditures}
-
-
 expenditures <- read_csv("ARP Project Reports - Expenditures.csv",
                         col_types = "cccnnnnn")
 
@@ -177,7 +171,7 @@ q2_2022_peer_exp_filter <- q2_2022_peer_exp %>%
 ) %>% 
   mutate_at(c("Adopted.Budget", 
               "Total.Cumulative.Obligations", 
-              "Total.Cumulative.Expenditures"), as.numeric) %>%
+              "Total.Cumulative.Expenditures"), ~as.numeric(str_remove_all(., ","))) %>%
   mutate(year = '2022',
          quarter = 'Q2')
 
@@ -188,7 +182,7 @@ q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
   ) %>%
   mutate_at(c("Adopted.Budget", 
               "Total.Cumulative.Obligations", 
-              "Total.Cumulative.Expenditures"), as.numeric) %>%
+              "Total.Cumulative.Expenditures"), ~as.numeric(str_remove_all(., ","))) %>%
     mutate(year = '2022',
          quarter = 'Q1')
 
@@ -234,7 +228,7 @@ expenditures_crosswalk_merge <- expenditures_peer_crosswalk %>%
   left_join(expenditures_peer_temp, by = c("Recipient Name", "state_abbr"))
 
 #merge expenditures_crosswalk_merge with government dataframe
-expenditure_peer <- governments %>%
+expenditure_peer <- governments_long %>%
   left_join(expenditures_crosswalk_merge, by = c("city_county", "city_county_status")) %>% 
   mutate(State = State.x) %>%
   select(-c("Recipeint Name", "State.y", "state_abbr", "Recipient Name", "State.Territory", "State.x")) %>%
