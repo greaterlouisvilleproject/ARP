@@ -143,8 +143,8 @@ rm(FIPS_population, governments, city_allocations, county_allocations, city_pop,
 ```
 
 ```{r louisville expenditures}
-expenditures <- read_csv("ARP Project Reports - Expenditures.csv",
-                        col_types = "cccnnnnn")
+expenditures_lou <- read_csv("ARP Project Reports - Expenditures.csv",
+                             col_types = "cccnnnnn")
 
 ```
 
@@ -246,7 +246,7 @@ rm(q4_2021_peer_exp, q4_2021_peer_exp_filter,
 ```
 
 ```{r}
-save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, file = "app/data_export2.RData")
+save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, expenditures_lou, file = "app/data_export2.RData")
 
 ```
 

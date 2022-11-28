@@ -37,28 +37,12 @@ load("data_export2.RData")
 ### save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, file = "app/data_export2.RData")
 
 
-
-
-
-
-### lou_allocations_treemap
-
-# It was derived from the lou_allocations data frame, and will now come from the projects data frame. 
-
-# lou_allocations_l3 <- projects %>%
-#   filter() %>%                                # filter to Louisville 
-#   select(Category = lou_category, Project_name = project_name, Funding = amount) # Let's keep the same column names column names by using code like 
-
-# Add in the unallocated amount
-# lou_total = governments_wide %>% filter(FIPS == "21111") %>% pull(total_allocation)
-# lou_allocated = projects %>% fiter(LOUISVILLE) %>% summarize(amount = sum(amount)) %>% pull(amount)
-# unallocated_row = data.frame(Category = "Unallocated", Project_name = "Unallocated", Funding = lou_total - lou_allocated)
-
-# lou_l3 %<>% bind_rows(unallocated_row)
-
-
-lou_allocations_l3 <- lou_allocations %>%
-  select(Category, Project_name, Funding)
+lou_allocations_l3 <- projects %>%
+  filter(`city/county` == 'Louisville',
+         !is.na(amount)) %>%
+  select(Category = lou_category,
+         Project_name = project_name,
+         Funding = amount)
 
 lou_allocations_l2 <- lou_allocations_l3 %>%
   group_by(Category) %>%
@@ -67,8 +51,31 @@ lou_allocations_l2 <- lou_allocations_l3 %>%
     Project_name = Category,
     Category = "")
 
-lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3)
 
+# Add in the unallocated amount
+
+lou_total = governments_wide %>%
+  filter(FIPS == "21111") %>%
+  pull(total_allocation)
+
+lou_allocated = projects %>%
+  filter(`city/county` == 'Louisville',
+         !is.na(amount)) %>%
+  summarize(amount = sum(amount)) %>%
+  pull(amount)
+
+
+high_level_row <- data.frame(Category = "", Project_name = "Unallocated", Funding = lou_total - lou_allocated)
+low_level_row <- data.frame(Category = "Unallocated", Project_name = NA, Funding = lou_total - lou_allocated)
+
+lou_allocations_l2 %<>% bind_rows(high_level_row)
+
+lou_allocations_l3 %<>% bind_rows(low_level_row)
+
+lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3) %>%
+  mutate(Funding = round(Funding, 0))
+
+lou_allocations_treemap$Project_name[lou_allocations_treemap2$Category == "Compliance and Reporting"] <- "Compliance & Reporting"
 
 
 # Some data frames might 
@@ -83,6 +90,22 @@ lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3)
 
 #https://censusreporter.org/profiles/14000US37129010501-census-tract-10501-new-hanover-nc/
 
+time_data <- projects %>%
+  filter(`city/county` == "Louisville",
+          !is.na(amount))
+
+# temp <- expenditures_lou %>%
+#   complete(nesting(year, quarter), project_id) %>%
+#   group_by(year, quarter)
+
+temp <- expenditures_lou %>%
+  mutate(period = paste0(quarter, "_", year)) %>%
+  select(project_id, budget, period, total_obligations) %>%
+  pivot_wider(names_from = period, values_from = total_obligations) %>%
+  select(project_id, budget, Q4_2021, Q1_2022, Q2_2022, Q3_2022)
+
+
+
 timevisData <- data.frame(
   id = 1:4,
   content =
@@ -96,7 +119,10 @@ timevisData <- data.frame(
       "2021-12-09", "2021-12-13"),
   group = c(rep("Permanent Supportive Housing", 2),
             rep("Childcare and Early Learning Initiatives", 2)),
-  type = c(rep("range", 4))
+  type = c(rep("range", 4)),
+  style = c("background-color: red; border-style: none; border-radius: 0px;", 
+            "background-color: red; border-style: none; border-radius: 0px;", 
+            "background-color: blue; border-style: none; border-radius: 0px;", "background-color: red; border-style: none;  border-radius: 0px;")
 )
 
 timevisDataGroups <- data.frame(
