@@ -20,6 +20,7 @@ library(scales)
 
 #setwd("app")
 load("data_export.RData")
+load("data_export2.RData")
 
 # FOR JOSH
 
