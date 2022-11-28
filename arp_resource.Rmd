@@ -118,7 +118,8 @@ county_allocations <- all_allocations %>%
 governments_wide <- FIPS_population %<>%
   left_join(city_allocations) %>%
   left_join(county_allocations) %>%
-  select(FIPS, city_allocation, county_allocation, city_population, county_population)
+  select(FIPS, city_allocation, county_allocation, city_population, county_population) %>%
+  mutate(total_allocation = city_allocation + county_allocation)
 
 all_allocations %<>%
   mutate(
@@ -233,9 +234,19 @@ expenditure_peer <- governments_long %>%
   mutate(State = State.x) %>%
   select(-c("Recipeint Name", "State.y", "state_abbr", "Recipient Name", "State.Territory", "State.x")) %>%
   relocate(State, .before = city_county)
-  
 
+expenditures <- expenditure_peer
+
+rm(q4_2021_peer_exp, q4_2021_peer_exp_filter,
+   q1_2022_peer_exp, q1_2022_peer_exp_filter,
+   q2_2022_peer_exp, q2_2022_peer_exp_filter,
+   expenditures_crosswalk_merge, expenditures_peer_temp,
+   expenditures_peer_crosswalk, expenditure_peer)
   
+```
+
+```{r}
+save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, file = "app/data_export2.RData")
 
 ```
 

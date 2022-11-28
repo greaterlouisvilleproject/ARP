@@ -21,6 +21,64 @@ library(scales)
 #setwd("app")
 load("data_export.RData")
 
+# FOR JOSH
+
+# We're going to replace the old data that goes into this dashboard with the new peer city data: https://greaterlou.shinyapps.io/ARP-in-Lou/
+
+# This file loads data_export.RData and then preps the data frames to go into the shiny app. 
+# We're going to edit the data we load in and the code below to get everything updated.
+
+
+### Step 1: Step up arp_resource.Rmd to save all data frames into an RData file.
+# We want arp_resource.Rmd to write a new .RData file that will eventually replace data_export.RData once it's complete.
+# This is important because we will need to load these data frames without rerunning all of arp_resource.Rmd.
+# Here's the code (you might need to edit slightly):
+### save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, file = "app/data_export2.RData")
+
+
+
+
+
+
+### lou_allocations_treemap
+
+# It was derived from the lou_allocations data frame, and will now come from the projects data frame. 
+
+# lou_allocations_l3 <- projects %>%
+#   filter() %>%                                # filter to Louisville 
+#   select(Category = lou_category, Project_name = project_name, Funding = amount) # Let's keep the same column names column names by using code like 
+
+# Add in the unallocated amount
+# lou_total = governments_wide %>% filter(FIPS == "21111") %>% pull(total_allocation)
+# lou_allocated = projects %>% fiter(LOUISVILLE) %>% summarize(amount = sum(amount)) %>% pull(amount)
+# unallocated_row = data.frame(Category = "Unallocated", Project_name = "Unallocated", Funding = lou_total - lou_allocated)
+
+# lou_l3 %<>% bind_rows(unallocated_row)
+
+
+lou_allocations_l3 <- lou_allocations %>%
+  select(Category, Project_name, Funding)
+
+lou_allocations_l2 <- lou_allocations_l3 %>%
+  group_by(Category) %>%
+  summarize(Funding = sum(Funding), .groups = "drop") %>%
+  mutate(
+    Project_name = Category,
+    Category = "")
+
+lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3)
+
+
+
+# Some data frames might 
+
+
+
+
+
+# Need: 
+
+# timevisData and timevisDataGroups
 
 #https://censusreporter.org/profiles/14000US37129010501-census-tract-10501-new-hanover-nc/
 
@@ -45,6 +103,22 @@ timevisDataGroups <- data.frame(
   content = c("Permanent Supportive Housing", "Childcare and Early Learning Initiatives")
 )
 
+
+timevis(timevisData,
+        groups = timevisDataGroups,
+        options = list(stack = FALSE))
+
+
+# lou_projects_og
+# Replace with the projects data frame filtered to Louisville
+
+lou_projects_og %<>%
+  transmute(Project,
+            Amount = dollar(Amount),
+            Description)
+
+
+# starting_map
 
 lou_label <-
   sprintf("%s<br/>%s<br/>%s<br/>%s",
@@ -85,17 +159,7 @@ leaflet() %>%
 
 
 
-lou_allocations_l3 <- lou_allocations %>%
-  select(Category, Project_name, Funding)
 
-lou_allocations_l2 <- lou_allocations_l3 %>%
-  group_by(Category) %>%
-  summarize(Funding = sum(Funding), .groups = "drop") %>%
-  mutate(
-    Project_name = Category,
-    Category = "")
-
-lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3)
 
 
 
@@ -153,9 +217,4 @@ plotly_CED_chart <- plot_ly(ced_df,x = ~type, y = ~White, type = 'bar',name= 'Wh
   add_trace(y = ~Other, name = 'Other') %>%
   layout(yaxis = list(title = 'Percentage (%)'),barmode = "stack")
 
-
-lou_projects_og %<>%
-  transmute(Project,
-         Amount = dollar(Amount),
-         Description)
 
