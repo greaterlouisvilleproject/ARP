@@ -33,3 +33,12 @@ body {
   right: 10px;
   top: 5px;
 }
+
+.vis-nested-group {
+  border: 0px;
+}
+
+.leaflet-tooltip{
+    width: 400px;
+    white-space: normal;
+}

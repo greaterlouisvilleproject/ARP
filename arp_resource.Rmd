@@ -121,6 +121,10 @@ governments_wide <- FIPS_population %<>%
   select(FIPS, city_allocation, county_allocation, city_population, county_population) %>%
   mutate(total_allocation = city_allocation + county_allocation)
 
+# Replace St. Louis FIPS since we have now added city and county data in the same row
+
+governments_wide$FIPS[governments_wide$FIPS == "29510"] <- "MERGED"
+
 all_allocations %<>%
   mutate(
     city_county_status = if_else(FIPS %in% c(18097, 21111, 47037), "merged", city_county_status)) %>%
@@ -137,7 +141,8 @@ rm(FIPS_population, governments, city_allocations, county_allocations, city_pop,
 
 
 ```{r projects}
-
+projects %<>%
+  mutate(FIPS = if_else(FIPS == "1073", "01073", FIPS))
 
 
 ```
@@ -246,7 +251,12 @@ rm(q4_2021_peer_exp, q4_2021_peer_exp_filter,
 ```
 
 ```{r}
-save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, expenditures_lou, file = "app/data_export2.RData")
+load("app/data_export.RData")
+
+```
+
+```{r}
+save(FIPS_df, FIPS_info, governments_long, governments_wide, projects, expenditures, expenditures_lou, usa, counties, file = "app/data_export2.RData")
 
 ```
 

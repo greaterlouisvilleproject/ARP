@@ -14,7 +14,7 @@ server <- function(input, output, session) {
   output$ARP_timeline <- renderTimevis({
     timevis(timevisData,
             groups = timevisDataGroups,
-            options = list(stack = FALSE))
+            options = list(stack = FALSE, start = "1/1/2021", end = "3/31/2027"))
   })
 
 
@@ -35,7 +35,7 @@ server <- function(input, output, session) {
       branchvalues="total",
       domain  = list(column=1)) %>%
       layout(
-        treemapcolorway = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C", "#7E9C80"),
+        treemapcolorway = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C", "#7E9C80", "#0E4A99", "#F58021"),
         #uniformtext=list(minsize = 8, mode='hide'),
         font = list(family = "Museo Sans 300"),
         plot_bgcolor = 'transparent',
