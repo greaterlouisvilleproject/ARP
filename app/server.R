@@ -36,7 +36,7 @@ server <- function(input, output, session) {
       domain  = list(column=1)) %>%
       layout(
         treemapcolorway = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C", "#7E9C80", "#0E4A99", "#F58021"),
-        #uniformtext=list(minsize = 8, mode='hide'),
+        uniformtext=list(minsize = 14, mode='hide'),
         font = list(family = "Museo Sans 300"),
         plot_bgcolor = 'transparent',
         paper_bgcolor = 'transparent')

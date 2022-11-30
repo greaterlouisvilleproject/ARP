@@ -156,98 +156,126 @@ expenditures_lou <- read_csv("ARP Project Reports - Expenditures.csv",
 ```{r peer expenditure cleanup}
 
 #create crosswalk file
-expenditures_peer_crosswalk <- read_csv("ARP Project Reports - project_to_govenment_crosswalk.csv") %>%
-  mutate(
-    `Recipient Name`= `Recipeint Name`
-  )
+expenditures_peer_crosswalk <- read_csv("ARP Project Reports - project_to_govenment_crosswalk.csv")
 
 
 #read in quarterly expenditures
 q4_2021_peer_exp <- read_csv("SLFRF-January-2022-Quarterly-Data-through-December-31-2021.xlsx - Project Updated.csv")
 q1_2022_peer_exp <- read.csv("April-2022-Quarterly-and-Annual-Reporting-Data-through-March-31-2022 (5).xlsx - Projects.csv")
-q2_2022_peer_exp <-read.csv("July-2022-Quarterly-Reporting-Data-through-June-30-2022 (5).xlsx - Projects.csv")
+q2_2022_peer_exp <- read.csv("July-2022-Quarterly-Reporting-Data-through-June-30-2022 (5).xlsx - Projects.csv")
 
-
-####### recode column names
-
-#q2 2022
-q2_2022_peer_exp_filter <- q2_2022_peer_exp %>% 
-  select('Recipient.Name', 'State.Territory', 'Completion.Status', "Project.Name", "Expenditure.Category.Group",
-         "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
-) %>% 
-  mutate_at(c("Adopted.Budget", 
-              "Total.Cumulative.Obligations", 
-              "Total.Cumulative.Expenditures"), ~as.numeric(str_remove_all(., ","))) %>%
-  mutate(year = '2022',
-         quarter = 'Q2')
-
-#q1 2022
-#does not contain 'Completion.Status'
-q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
-  select('Recipient.Name', 'State.Territory', "Project.Name", "Expenditure.Category.Group", "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures"
-  ) %>%
-  mutate_at(c("Adopted.Budget", 
-              "Total.Cumulative.Obligations", 
-              "Total.Cumulative.Expenditures"), ~as.numeric(str_remove_all(., ","))) %>%
-    mutate(year = '2022',
-         quarter = 'Q1')
 
 #q4 2021
 #does not have completion status
 q4_2021_peer_exp_filter <- q4_2021_peer_exp %>%
-  select("Recipient Name", "State/Territory", "Project Name", "Expenditure Category Group", 
-         "Expenditure Category", "Project Description", "Adopted Budget", "Total Obligations", "Total Expenditures"
-  ) %>%
-  mutate(
-    Recipient.Name = `Recipient Name`,
-    State.Territory = `State/Territory`,
-    Project.Name = `Project Name`,
-    Expenditure.Category.Group = `Expenditure Category Group`,
-    Expenditure.Category = `Expenditure Category`,
-    Project.Description = `Project Description`,
-    Adopted.Budget = `Adopted Budget`,
-    Total.Cumulative.Obligations = `Total Obligations`,
-    Total.Cumulative.Expenditures = `Total Expenditures`
-    ) %>%
-  select("Recipient.Name", "State.Territory", "Project.Name", "Expenditure.Category.Group", 
-         "Expenditure.Category", "Project.Description", "Adopted.Budget", "Total.Cumulative.Obligations", "Total.Cumulative.Expenditures") %>%
-    mutate(year = '2021',
-         quarter = 'Q4')
+  transmute(
+    recipient = `Recipient Name`,
+    state_name = `State/Territory`, 
+    year = 2021,
+    quarter = "Q4",
+    completion = "", 
+    project = `Project Name`, 
+    # "Expenditure.Category.Group",
+    # "Expenditure.Category", 
+    description = `Project Description`, 
+    amount = `Adopted Budget`, 
+    cumulative_obligations = `Total Obligations`, 
+    cumulative_expenditures = `Total Expenditures`) %>% 
+  mutate(across(amount:cumulative_expenditures, ~as.numeric(str_remove_all(., ","))))
+
+####### recode column names
+#q1 2022
+#does not contain 'Completion.Status'
+q1_2022_peer_exp_filter <- q1_2022_peer_exp %>%
+  transmute(
+    recipient = `Recipient.Name`,
+    state_name = `State.Territory`, 
+    year = 2022,
+    quarter = "Q1",
+    completion = NA_character_, 
+    project = `Project.Name`, 
+    # "Expenditure.Category.Group",
+    # "Expenditure.Category", 
+    description = `Project.Description`, 
+    amount = `Adopted.Budget`, 
+    cumulative_obligations = `Total.Cumulative.Obligations`, 
+    cumulative_expenditures = `Total.Cumulative.Expenditures`) %>% 
+  mutate(across(amount:cumulative_expenditures, ~as.numeric(str_remove_all(., ","))))
+
+
+#q2 2022
+q2_2022_peer_exp_filter <- q2_2022_peer_exp %>% 
+  transmute(
+    recipient = `Recipient.Name`,
+    state_name = `State.Territory`, 
+    year = 2022,
+    quarter = "Q2",
+    completion = `Completion.Status`, 
+    project = `Project.Name`, 
+    # "Expenditure.Category.Group",
+    # "Expenditure.Category", 
+    description = `Project.Description`, 
+    amount = `Adopted.Budget`, 
+    cumulative_obligations = `Total.Cumulative.Obligations`, 
+    cumulative_expenditures = `Total.Cumulative.Expenditures`) %>% 
+  mutate(across(amount:cumulative_expenditures, ~as.numeric(str_remove_all(., ","))))
+
 
 #bind rows
-expenditures_peer_temp <- bind_rows(q2_2022_peer_exp_filter, 
-                                    q1_2022_peer_exp_filter, 
-                                    q4_2021_peer_exp_filter)
-
+expenditures_peer_temp <- bind_rows(
+  q4_2021_peer_exp_filter, 
+  q1_2022_peer_exp_filter,
+  q2_2022_peer_exp_filter)
 
 #create new column in expenditures_peer_temp with state abbreviation
-expenditures_peer_temp$state_abbr <- state.abb[match(expenditures_peer_temp$State.Territory, state.name)]
+expenditures_peer_temp$state_abbr <- state.abb[match(expenditures_peer_temp$state_name, state.name)]
 
-
-#merge expenditures_peer_temp with cross walk
-expenditures_peer_temp <- expenditures_peer_temp %>%
-  mutate(
-    `Recipient Name`= Recipient.Name
-  )
-
-expenditures_crosswalk_merge <- expenditures_peer_crosswalk %>%
-  left_join(expenditures_peer_temp, by = c("Recipient Name", "state_abbr"))
+expenditures_crosswalk_merge <- expenditures_peer_temp %>%
+  left_join(expenditures_peer_crosswalk, by = c("recipient", "state_abbr")) %>%
+  filter(!is.na(city_county))
 
 #merge expenditures_crosswalk_merge with government dataframe
-expenditure_peer <- governments_long %>%
-  left_join(expenditures_crosswalk_merge, by = c("city_county", "city_county_status")) %>% 
-  mutate(State = State.x) %>%
-  select(-c("Recipeint Name", "State.y", "state_abbr", "Recipient Name", "State.Territory", "State.x")) %>%
-  relocate(State, .before = city_county)
-
-expenditures <- expenditure_peer
+expenditures <- expenditures_crosswalk_merge %>%
+  left_join(governments_long, by = c("city_county", "city_county_status"))
 
 rm(q4_2021_peer_exp, q4_2021_peer_exp_filter,
    q1_2022_peer_exp, q1_2022_peer_exp_filter,
    q2_2022_peer_exp, q2_2022_peer_exp_filter,
    expenditures_crosswalk_merge, expenditures_peer_temp,
-   expenditures_peer_crosswalk, expenditure_peer)
+   expenditures_peer_crosswalk)
   
+#expenditures %>% group_by(FIPS, city_county, paste0(year, "-", quarter)) %>% summarize(n = n()) %>% View()
+
+```
+
+```{r}
+
+expenditures_filled <- expenditures %>%
+  mutate(
+    time_period = factor(paste0(quarter, "-", year),
+        labels = c("Q4-2021", "Q1-2022", "Q2-2022"), 
+         levels = c("Q4-2021", "Q1-2022", "Q2-2022"), ordered = TRUE)) %>%
+  complete(time_period, nesting(FIPS, recipient, project)) %>%
+  group_by(FIPS, recipient, project) %>%
+  fill(cumulative_expenditures, .direction = "down") %>%
+  ungroup()
+
+expenditure_graph <- expenditures_filled  %>%
+  group_by(FIPS, time_period) %>%
+  summarize(n=sum(cumulative_expenditures, na.rm = TRUE))
+
+ggplot(expenditure_graph, aes(x=time_period, y=n, group=FIPS)) +
+  geom_line() +
+  geom_point()
+
+# t <- expenditures %>%
+#   mutate(
+#     time_period = factor(paste0(quarter, "-", year),
+#         labels = c("Q4-2021", "Q1-2022", "Q2-2022"), 
+#          levels = c("Q4-2021", "Q1-2022", "Q2-2022"), ordered = TRUE)) %>%
+#   filter(FIPS == 26081) %>%
+#   arrange(recipient, project, time_period)
+
 ```
 
 ```{r}

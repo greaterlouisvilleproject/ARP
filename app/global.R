@@ -22,6 +22,17 @@ library(scales)
 
 load("data_export2.RData")
 
+expenditure_graph <- expenditures  %>%
+  mutate(time_period = paste0(quarter, "-", year)) %>%
+  select(FIPS, time_period, Total.Cumulative.Expenditures) %>%
+  group_by(FIPS, time_period) %>%
+  
+  summarize(n=sum(Total.Cumulative.Expenditures, na.rm = TRUE)) %>%
+  mutate(
+    total = sum(n),
+    rate = n/sum(n)*100) %>%
+  drop_na()
+
 # Treemap
 lou_allocations_l3 <- projects %>%
   filter(`city/county` == 'Louisville',
@@ -63,6 +74,12 @@ lou_allocations_treemap <- bind_rows(lou_allocations_l2, lou_allocations_l3) %>%
 
 lou_allocations_treemap$Project_name[lou_allocations_treemap$Category == "Compliance and Reporting"] <- "Compliance & Reporting"
 
+lou_allocations_treemap %<>%
+  mutate(
+    Project_name = 
+      case_when(
+        Category == "" ~ Project_name,
+        Category != "" ~ str_wrap(Project_name, width = 15) %>% str_replace_all("\\n", "<br>")))
 
 # Need: 
 
